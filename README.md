@@ -32,6 +32,8 @@ Windows:
 Install ADB from here: 
 [SDK Platform Tools release notes  |  Android Studio  |  Android Developers](https://developer.android.com/tools/releases/platform-tools)
 
+After download the package, update the `PATH` environment variable.
+
 ### Build
 
 This method works on Linux, macOS, and Windows. macOS and Windows users should install Docker Desktop.
@@ -59,7 +61,12 @@ cmake --build build-snapdragon
 
 ### Pushing to device
 For this step, your device needs to be configured for on-device development.
-Please see https://developer.android.com/studio/debug/dev-options for details.
+See https://developer.android.com/studio/debug/dev-options for details:
+
+- After you turn on your mobile phone, go to `Setting -> About Phone -> Software Information -> Build Number`. Tap it 7 times until you see the dialog "you are now a developer!".
+- Return back to the prior page and find the `Developer Options` tab at the bottom. Toggle this option on. Toggle the USB debugging and Disable ADB timeout option on.
+- Connect your device to your laptop. Make sure your laptop can detect the mobile phone.
+- Try `adb shell` on your laptop. For the first time you try to login, it will say permission denied. Approve it on your mobile phone and try it again. 
 
 
 Create a device installable package:
@@ -90,7 +97,7 @@ bin  include  lib
 
 Push model to device:
 ```bash
-adb push Llama-3.2-1B-Instruct-Q4_0.gguf /data/local/tmp/gguf
+adb push Llama-3.2-1B-Instruct-Q4_0.gguf /data/local/tmp/gguf/Llama-3.2-1B-Instruct-Q4_0.gguf
 ```
 
 Check model is on device:
@@ -99,7 +106,23 @@ adb shell
 cd data/local/tmp/gguf
 ls
 ```
+Update permissions of executables in `llama.cpp/bin`
+```
+adb shell
+cd data/local/tmp/llama.cpp
+chmod +x bin/*
+```
 
+### Setup on Qualcomm Device Cloud
+Go to [QDC](https://qdc.qualcomm.com/) and login with your Qualcomm ID. Request for free time of the Snapdragon 8 Elite devices (you will get 1000 mins). Start an interactive session. Do not turn on any options and upload any files.
+
+Once your session is initiated, you can login by following the tutorial given on QDC to start the SSH session and login through `adb` as illustrated previously.
+
+> [!NOTE]
+> QDC is not stable for development in a long period. It will disconnect your session and shutdown with error sometimes. You can use it as an alternative for short-term development. Long period benchmarking (> 2 hours) should be executed on your phone.
+
+> [!TIP]
+> Do `netstat` to check if any ports are occupied and change the SSH forwarding command correspondingly.
 
 ---
 
@@ -135,7 +158,7 @@ D="HTP0"   signle Hexagon session (models up to 4B)
 D="HTP0,HTP1"  two or more Hexagon sessions (models up to 13B)
 ```
 
-To run the scripts navigate to this directory for access to the wrapper scritpts
+To run the scripts navigate to this directory for access to the wrapper scripts
 ```bash
 cd docs\backend\hexagon
 ```
@@ -144,6 +167,31 @@ Ask the model a question:
 ```bash
 ./run-cli.sh -no-cnv -p "'what is the most popular cookie in the world?'"
 ```
+
+> [!NOTE]
+> Windows: It is recommended to use WSL, since the testing script is Linux-based. Please update the `adb` command in `run-cli.sh` to the absolute path of your adb.exe executable.
+
+---
+
+## Run Testbench
+
+For LLM benchmarking, we will use subsets of [LongBench](https://github.com/THUDM/LongBench) for long-context processing evaluation and [TruthfulQA](https://github.com/sylinrl/TruthfulQA) for short-context knowledge evaluation. These datasets are used in [NeurIPS 2024 EdgeLLM competition](https://edge-llms-challenge.github.io/edge-llm-challenge.github.io/challenge). 
+
+> [!IMPORTANT]
+> You are only allowed to use datasets that are not LongBench or TruthfulQA to train or finetune your model. For example, you can use [C4](https://huggingface.co/datasets/allenai/c4) for model pretraining and [Alpaca](https://huggingface.co/datasets/tatsu-lab/alpaca) for instruction tuning. The final evaluation will include hidden test cases to prevent overfitting the benchmark.
+
+1. Unzip `prompt_files.zip` to the folder `prompt_files`.
+2. Run `python -m pip install -r requirement.txt` (or manually install these packages one by one). 
+3. Replace `run-cli.sh` under `/docs/backend/hexagon`.
+4. TruthfulQA: run `python truthful_qa_eval.py`. After running the script, it will show the `max_score` and `accuracy`. Both metrics are higher the better. We use BLEURT, which is a model-based metric recommended in the TruthfulQA paper.
+> [!WARNING]
+> TruthfulQA takes around 3 hours to finish. Make sure your mobile phone is connected during the evaluation. We do not recommend using QDC for benchmarking.
+5. LongBench: As an example, we provided 50 samples from the QMSum subset. Run `python longbench_test.py`. After it is finished, run `python longbench_eval.py`. It will log the average RougeL score of your model.
+6. For both benchmark, the script will product a `debug.log` file. Run
+```
+python parse_log.py debug.log
+```
+This will print the average generation speed in tokens/s.
 
 ---
 
