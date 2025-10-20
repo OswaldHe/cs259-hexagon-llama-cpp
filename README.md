@@ -422,6 +422,19 @@ llama-mtmd-cli -m $path_to_LM --mmproj $path_to_projector --image $path_to_image
 
 
 ### 4. Run Benchmark
+Note: you might need to modify the `run_llava.py` line 113-116 (code below) to correctly call the bash script
+```python
+out = subprocess.run(
+    [
+        "C:\Program Files\Git\\bin\\bash.exe", # you need to change this to the correct bash of your machine
+        "./run-mtmd-cli.sh", 
+        "--image", 
+        REMOTE_IMG, 
+        "--prompt", 
+        prompt],
+    text=True, capture_output=True, check=True
+)
+```
 ```bash
 cd example-vqa;
 python run_llava.py
