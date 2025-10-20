@@ -389,6 +389,54 @@ llama-quantize Llama-3.1-8B-F16.gguf.gguf Llama-3.1-8B_Q8_0.gguf q8_0
 
 ---
 
+## Run Vision Language Models
+
+### 1. Download Models
+Download the following files from [ZiangWu/MobileVLM_V2-1.7B-GGUF](https://huggingface.co/ZiangWu/MobileVLM_V2-1.7B-GGUF):
+
+- `ggml-model-q4_k.gguf` (Language Model)
+- `mmproj-model-f16.gguf` (Projector)
+
+### 2. Upload to Phone via ADB
+```bash
+adb push ggml-model-q4_k.gguf /data/local/tmp/gguf
+adb push mmproj-model-f16.gguf /data/local/tmp/gguf
+```
+
+### 3. Run the Model
+Use `llama-mtmd-cli` to run the model. 
+
+In the adb shell, check usage of `llama-mtmd-cli` with:
+```bash
+LD_LIBRARY_PATH=/data/local/tmp/llama.cpp/lib \
+ADSP_LIBRARY_PATH=/data/local/tmp/llama.cpp/lib \
+/data/local/tmp/llama.cpp/bin/llama-mtmd-cli --help
+````
+
+Refer to `run-mtmd-cli.sh` for an example script.  
+A simplest example would be:
+```bash
+llama-mtmd-cli -m $path_to_LM --mmproj $path_to_projector --image $path_to_image -p "$input_text"
+```
+
+
+
+### 4. Run Benchmark
+```bash
+cd example-vqa;
+python run_llava.py
+```
+
+### 5. Additional Tutorial for VLLM
+
+More detailed information can be found in
+https://github.com/qualcomm/llama.cpp/blob/hexagon/docs/multimodal.md
+https://github.com/qualcomm/llama.cpp/blob/hexagon/docs/multimodal/MobileVLM.md
+https://github.com/qualcomm/llama.cpp/blob/hexagon/docs/multimodal/llava.md
+https://github.com/qualcomm/llama.cpp/tree/hexagon/docs/multimodal
+
+---
+
 ## Quick Reference
 
 ```bash
